@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -14,6 +15,7 @@ using Excel = Microsoft.Office.Interop.Excel;
 namespace ExcelConverter
 {
     public delegate void SetProcessHandler(int process);
+
     public partial class MainForm : Form
     {
         #region Flieds以及Properties
@@ -26,7 +28,7 @@ namespace ExcelConverter
         private ExcelHandler _excelHandler = new ExcelHandler();
         private bool resultFile = false;
         private Dictionary<string, bool> resultFolder;
-
+        Info info = new Info();
 
         public string FName
         {
@@ -65,6 +67,7 @@ namespace ExcelConverter
         public MainForm()
         {
             InitializeComponent();
+            
             Hand.SetProcess += UpdateProcess;
             Hand.SetTotal += SetTotalProcess;
         }
@@ -82,7 +85,6 @@ namespace ExcelConverter
             this.modeSelection.ValueMember = "Key";
             this.batchmode.Checked = true;
             this.openPathBtn.Click += OpenDirBtn;
-
         }
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
@@ -92,7 +94,7 @@ namespace ExcelConverter
 
         private void batchmode_CheckedChanged(object sender, EventArgs e)
         {
-            RadioButton s = (RadioButton)sender;
+            RadioButton s = (RadioButton) sender;
 
             //todo 要动态反射
             switch (s.Checked)
@@ -106,12 +108,11 @@ namespace ExcelConverter
 
                     #endregion
 
-                    //#region 开始方法切换事件
+                    #region 按键名称切换
 
-                    //this.startBtn.Click -= StartFileBtn;
-                    //this.startBtn.Click += StartFolderBtn;
+                    this.openPathBtn.Text = @"选择文件夹";
 
-                    //#endregion
+                    #endregion
 
                     break;
                 case false:
@@ -123,11 +124,11 @@ namespace ExcelConverter
 
                     #endregion
 
-                    //#region 开始方法切换事件
-                    //this.startBtn.Click -= StartFolderBtn;
-                    //this.startBtn.Click +=StartFileBtn;
+                    #region 按键名称切换
 
-                    //#endregion
+                    this.openPathBtn.Text = @"选择文件";
+
+                    #endregion
 
                     break;
             }
@@ -135,8 +136,8 @@ namespace ExcelConverter
 
         private void modeSelection_SelectedIndexChanged(object sender, EventArgs e)
         {
-            ComboBox obj = (ComboBox)sender;
-            CovertFormat = (KeyValuePair<Excel.XlFileFormat, string>)obj.SelectedItem;
+            ComboBox obj = (ComboBox) sender;
+            CovertFormat = (KeyValuePair<Excel.XlFileFormat, string>) obj.SelectedItem;
         }
 
         private void startBtn_Click(object sender, EventArgs e)
@@ -144,10 +145,12 @@ namespace ExcelConverter
             Thread workerThread = new Thread(new ThreadStart(Start));
             workerThread.Start();
         }
+
         #endregion
 
 
         #region 切换委托
+
         private void OpenDirBtn(object sender, EventArgs e)
         {
             #region 选择路径
@@ -212,24 +215,31 @@ namespace ExcelConverter
             else
             {
                 MessageBox.Show(@"缺少路径,请选择文件或者文件夹");
-                return new Dictionary<string, bool> { { FPath, false } };
+                return new Dictionary<string, bool> {{FPath, false}};
             }
         }
+
         #endregion
 
         #region 执行线程
+
         private void Start()
         {
             switch (batchmode.Checked)
             {
                 case false:
                     resultFile = StartFileBtn();
+                    this.info.GenerateInfo(FName,resultFile);
+                    this.info.ShowDialog();
                     break;
                 case true:
                     resultFolder = StartFolderBtn();
+                    this.info.GenerateInfo(resultFolder, resultFolder.All(item=>item.Value));
+                    this.info.ShowDialog();
                     break;
             }
         }
+
         #endregion
 
         #region 给子线程的委托，用来更新控件内容
@@ -238,7 +248,7 @@ namespace ExcelConverter
         {
             if (this.progressBar1.InvokeRequired)
             {
-                this.BeginInvoke(new SetProcessHandler(UpdateProcess), new object[] { process });
+                this.BeginInvoke(new SetProcessHandler(UpdateProcess), new object[] {process});
             }
             else
             {
@@ -250,7 +260,7 @@ namespace ExcelConverter
         {
             if (this.progressBar1.InvokeRequired)
             {
-                this.BeginInvoke(new SetProcessHandler(SetTotalProcess), new object[] { total });
+                this.BeginInvoke(new SetProcessHandler(SetTotalProcess), new object[] {total});
             }
             else
             {
@@ -258,9 +268,6 @@ namespace ExcelConverter
             }
         }
 
-
         #endregion
-
-
     }
 }
